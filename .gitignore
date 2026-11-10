@@ -1,0 +1,50 @@
+# Private build state and generated output. Publish APKs as Release assets.
+/.local/
+/.gradle/
+**/build/
+/dist/
+local.properties
+*.apk
+*.apks
+*.aab
+*.idsig
+*.dex
+*.class
+*.hprof
+hs_err_pid*
+
+# Signing material and credentials must never enter source history.
+*.jks
+*.keystore
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+credentials.json
+service-account*.json
+google-services.json
+gradle.properties
+
+# Machine-specific IDE, assistant and operating-system files.
+.idea/
+.vscode/
+.settings/
+.codex/
+.agents/
+.codex-remote-attachments/
+AGENTS.md
+*.iml
+.classpath
+.project
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local diagnostics and scratch backups.
+*.log
+*.bak
+*.orig
+*.rej
+*~
