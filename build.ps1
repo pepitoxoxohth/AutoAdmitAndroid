@@ -64,7 +64,7 @@ function Assert-PackagePrivacy([string]$Package) {
 $compiled = Join-Path $buildRoot 'compiled.zip'
 $resources = Join-Path $buildRoot 'resources.apk'
 Invoke-Checked (Join-Path $buildTools 'aapt2.exe') @('compile','--dir',(Join-Path $projectRoot 'app\src\main\res'),'-o',$compiled)
-Invoke-Checked (Join-Path $buildTools 'aapt2.exe') @('link','-o',$resources,'-I',$androidJar,'--manifest',(Join-Path $projectRoot 'app\src\main\AndroidManifest.xml'),$compiled,'-A',(Join-Path $projectRoot 'app\src\main\assets'),'--java',$generated,'--min-sdk-version','26','--target-sdk-version','35','--version-code','87','--version-name','0.1.86')
+Invoke-Checked (Join-Path $buildTools 'aapt2.exe') @('link','-o',$resources,'-I',$androidJar,'--manifest',(Join-Path $projectRoot 'app\src\main\AndroidManifest.xml'),$compiled,'-A',(Join-Path $projectRoot 'app\src\main\assets'),'--java',$generated,'--min-sdk-version','26','--target-sdk-version','35','--version-code','89','--version-name','0.1.88')
 $sources = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'app\src\main\java'),$generated -Recurse -Filter '*.java' | ForEach-Object FullName)
 Invoke-Checked (Join-Path $javaRoot 'bin\javac.exe') (@('--release','17','-encoding','UTF-8','-classpath',"$androidJar;$parserJar",'-d',$classes) + $sources)
 $applicationJar = Join-Path $buildRoot 'app.jar'
@@ -121,11 +121,11 @@ $keystore = Join-Path $signing 'xo-classic-development.jks'
 if (!(Test-Path -LiteralPath $keystore)) {
     Invoke-Checked (Join-Path $javaRoot 'bin\keytool.exe') @('-genkeypair','-keystore',$keystore,'-storepass','android','-keypass','android','-alias','xoclassic','-dname','CN=XO Classic Personal Development','-keyalg','RSA','-keysize','2048','-validity','10000')
 }
-$apk = Join-Path $dist 'xo-classic-0.1.86.apk'
+$apk = Join-Path $dist 'xo-classic-0.1.88.apk'
 Invoke-Checked (Join-Path $buildTools 'apksigner.bat') @('sign','--ks',$keystore,'--ks-key-alias','xoclassic','--ks-pass','pass:android','--key-pass','pass:android','--v1-signing-enabled','false','--v2-signing-enabled','true','--v3-signing-enabled','true','--v4-signing-enabled','false','--out',$apk,$aligned)
 Invoke-Checked (Join-Path $buildTools 'apksigner.bat') @('verify','--verbose','--print-certs',$apk)
 Invoke-Checked (Join-Path $buildTools 'zipalign.exe') @('-c','-p','4',$apk)
 $hash = (Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText((Join-Path $dist 'SHA256SUMS.txt'), "$hash  xo-classic-0.1.86.apk`n")
+[IO.File]::WriteAllText((Join-Path $dist 'SHA256SUMS.txt'), "$hash  xo-classic-0.1.88.apk`n")
 Write-Output "APK ready: $apk"
 
