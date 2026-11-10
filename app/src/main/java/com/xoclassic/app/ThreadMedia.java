@@ -15,6 +15,8 @@ public final class ThreadMedia {
         try{
             String safe=PreviewFetch.webUrl(address);URI uri=URI.create(safe);String host=uri.getHost().toLowerCase(Locale.ROOT).replaceFirst("^www\\.",""),path=uri.getPath();
             if(host.equals("xoxohth.com")||host.endsWith(".xoxohth.com")||host.equals("autoadmit.com")||host.endsWith(".autoadmit.com"))return false;
+            // Twitter/X image CDN often puts the image format in the query, not the filename.
+            if(host.equals("pbs.twimg.com")&&path.matches("/media/[A-Za-z0-9_-]+")&&uri.getRawQuery()!=null&&java.util.regex.Pattern.compile("(?:^|&)format=(?:jpg|jpeg|png|gif|webp)(?:&|$)",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(uri.getRawQuery()).find())return true;
             String direct=PreviewResolver.directKind(path,"");
             if(direct.equals("image")||direct.equals("video")||direct.equals("audio"))return true;
             if(!PreviewResolver.embed(safe).isEmpty()||!PreviewResolver.imgurAlbumViewer(safe).isEmpty())return true;
