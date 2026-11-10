@@ -74,7 +74,7 @@ Recent header/unread and updater changes have not completed live end-to-end phon
 
 ## GitHub release updates
 
-The app’s update source is user-configured under Account → Updates and is empty by default. It uses public GitHub Releases without a token. Publishing an APK does not require publishing your private build folder or signing material.
+The update source defaults to the official public repository and can be changed under Account → Updates. Fork maintainers should replace AppUpdater.DEFAULT_REPOSITORY with their own public release repository. It uses public GitHub Releases without a token. Publishing an APK does not require publishing your private build folder or signing material.
 
 For a release of your fork:
 

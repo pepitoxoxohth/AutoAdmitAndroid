@@ -64,7 +64,7 @@ If posting or editing cannot be confirmed, the app does not resend automatically
 
 ## Updates and forks
 
-Account → Updates accepts a public GitHub `owner/repository` or its HTTPS URL. The update source is **blank by default**; no personal repository or GitHub login is built into the app.
+Account → Updates accepts a public GitHub `owner/repository` or its HTTPS URL. The official public repository is selected by default. You can save a different public repository, or clear the source. **Use official repository** restores the default. The public repository name is visible in the APK; no GitHub email, password or token is included.
 
 - **Check for updates** looks for the latest stable release.
 - **Choose version** lists supported stable APK releases and their notes. Installed and older versions are labelled; only newer builds can be installed as updates.

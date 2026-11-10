@@ -13,6 +13,7 @@ import java.util.*;
 /** Explicit public-release requests only; never shares the forum cookie jar. */
 public final class AppUpdater {
     public static final int MAX_APK=64*1024*1024;
+    public static final String DEFAULT_REPOSITORY="pepitoxoxohth/AutoAdmitAndroid";
     public static final class Release {public String version,notes,url,digest;public long size;}
     public static final class ReleasePage {public final List<Release> releases=new ArrayList<>();public boolean more;public int skipped;}
     public static ReleasePage parsePage(String repo,String json)throws Exception{
