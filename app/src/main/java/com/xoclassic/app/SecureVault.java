@@ -24,19 +24,23 @@ public final class SecureVault {
             .setRandomizedEncryptionRequired(true).setUserAuthenticationRequired(false).build());
         return generator.generateKey();
     }
-    public synchronized void put(String name,String value) throws Exception {
+    public synchronized String seal(String name,String value) throws Exception {
         Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key());
         cipher.updateAAD(name.getBytes(StandardCharsets.UTF_8));
         String record=Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP)+":"+Base64.encodeToString(cipher.doFinal(value.getBytes(StandardCharsets.UTF_8)),Base64.NO_WRAP);
-        if(!preferences.edit().putString(name,record).commit())throw new Exception("Secure storage unavailable.");
+        return record;
     }
-    public synchronized String get(String name) throws Exception {
-        String record=preferences.getString(name,null);if(record==null)return null;
+    public synchronized String open(String name,String record) throws Exception {
+        if(record==null)return null;
         String[] pieces=record.split(":",2);if(pieces.length!=2)throw new Exception("Saved login could not be unlocked.");
         Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,Base64.decode(pieces[0],Base64.NO_WRAP)));
         cipher.updateAAD(name.getBytes(StandardCharsets.UTF_8));
         return new String(cipher.doFinal(Base64.decode(pieces[1],Base64.NO_WRAP)),StandardCharsets.UTF_8);
     }
+    public synchronized void put(String name,String value) throws Exception {
+        if(!preferences.edit().putString(name,seal(name,value)).commit())throw new Exception("Secure storage unavailable.");
+    }
+    public synchronized String get(String name) throws Exception {return open(name,preferences.getString(name,null));}
     public synchronized void remove(String name) { preferences.edit().remove(name).commit(); }
 }

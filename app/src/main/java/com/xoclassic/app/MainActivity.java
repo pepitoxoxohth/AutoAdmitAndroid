@@ -62,7 +62,7 @@ public final class MainActivity extends Activity {
     private String screen="board",filter="All",search="",draft="",subject="",parent="";
     private List<ForumParser.ThreadItem> threads=new ArrayList<>();
     private ForumParser.ThreadPage current;
-    private ForumParser.Form composeForm;
+    private ForumParser.Form composeForm;private ComposerState restoredComposer;private boolean restoredComposerThread;
     private static final int PICK_UPLOAD_IMAGE=7314;
     private ImageUpload activeUpload;
     private ForumParser.Form pickerOwner;
@@ -140,7 +140,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);themeStore=new AppColors.Store(this);applyTheme();
         preferences=getSharedPreferences("classic",MODE_PRIVATE);vault=new SecureVault(this);
-        client=new ForumClient(this,preferences.getString("origin","https://xoxohth.com"),vault);
+        client=new ForumClient(this,preferences.getString("origin","https://xoxohth.com"),vault);if(state!=null)try{restoredComposer=ComposerState.decode(vault,state.getString(ComposerState.KEY));if(restoredComposer!=null&&!restoredComposer.origin.equals(client.origin))restoredComposer=null;}catch(Exception invalid){restoredComposer=null;}
         getWindow().setStatusBarColor(AppColors.color(BG));getWindow().setNavigationBarColor(AppColors.color(BG));
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         appLock=new AppLock(this,preferences,this::afterAppUnlock,this::appLockSettingChanged);if(!appLock.locked())startAppContent();
@@ -148,7 +148,7 @@ public final class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean focused){super.onWindowFocusChanged(focused);if(replyHighlights!=null){replyHighlights.setActive(resumed&&focused);}}
     @Override protected void onResume(){super.onResume();activityResumed=true;if(appLock!=null&&!appLock.resume()){resumed=false;return;}resumeAppContent();}
     private void resumeAppContent(){resumed=true;applyTheme();refreshHandler.removeCallbacks(themeTick);refreshHandler.postDelayed(themeTick,60000-System.currentTimeMillis()%60000);if(replyHighlights!=null)replyHighlights.setActive(true);for(LinkPreviewDialog dialog:previews)dialog.resumeMedia();refreshHandler.removeCallbacks(refreshTick);refreshHandler.postDelayed(refreshTick,REFRESH_MS);scheduleAuthors();scheduleSessionCheck();}
-    @Override protected void onPause(){operationRevision++;activityResumed=false;if(threadToolsPopup!=null)threadToolsPopup.dismiss();if(appLock!=null)appLock.background();if(savedAccountDialog!=null){savedAccountDialog.dismiss();savedAccountDialog=null;}savedAccountsUnlocked=false;if(screen.equals("account")&&accountSection.equals("Saved")&&accountsPinRequired())account();saveThreadTab();resumed=false;refreshHandler.removeCallbacks(themeTick);if(replyHighlights!=null)replyHighlights.setActive(false);for(LinkPreviewDialog dialog:previews)dialog.pauseMedia();refreshHandler.removeCallbacks(refreshTick);refreshHandler.removeCallbacks(authorTick);refreshHandler.removeCallbacks(automaticSessionTick);super.onPause();}
+    @Override protected void onPause(){capture();operationRevision++;activityResumed=false;if(threadToolsPopup!=null)threadToolsPopup.dismiss();if(appLock!=null)appLock.background();if(savedAccountDialog!=null){savedAccountDialog.dismiss();savedAccountDialog=null;}savedAccountsUnlocked=false;if(screen.equals("account")&&accountSection.equals("Saved")&&accountsPinRequired())account();saveThreadTab();resumed=false;refreshHandler.removeCallbacks(themeTick);if(replyHighlights!=null)replyHighlights.setActive(false);for(LinkPreviewDialog dialog:previews)dialog.pauseMedia();refreshHandler.removeCallbacks(refreshTick);refreshHandler.removeCallbacks(authorTick);refreshHandler.removeCallbacks(automaticSessionTick);super.onPause();}
     @Override public void onUserInteraction(){super.onUserInteraction();lastInteraction=SystemClock.uptimeMillis();}
     @Override public void onConfigurationChanged(Configuration configuration){super.onConfigurationChanged(configuration);for(LinkPreviewDialog dialog:previews)dialog.resize();if(screen.equals("thread")&&current!=null){ReadingAnchor anchor=readingAnchor();thread();ScrollView rotated=scroll;rotated.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener(){public void onGlobalLayout(){rotated.getViewTreeObserver().removeOnGlobalLayoutListener(this);if(rotated==scroll)restoreAnchor(anchor);}});}}
     @Override protected void onDestroy(){destroyed=true;if(replyPreviews!=null)replyPreviews.leave();if(appLock!=null)appLock.close();refreshHandler.removeCallbacks(themeTick);resetThreadFind();findIndexer.shutdownNow();refreshHandler.removeCallbacks(expireHiddenThreadUndo);removeThreadHideNotice();refreshHandler.removeCallbacks(persistTabPosition);refreshHandler.removeCallbacks(expireTabUndo);if(tabsDialog!=null)tabsDialog.dismiss();if(activeUpload!=null)activeUpload.cancel();if(replyHighlights!=null)replyHighlights.close();mediaIndexer.shutdownNow();cancelBackgroundAuthor("");if(lazyThread!=null)lazyThread.close();if(deferredBoard!=null)deferredBoard.close();renderedPosts.clear();for(LinkPreviewDialog dialog:new ArrayList<>(previews))dialog.dismiss();refreshHandler.removeCallbacks(refreshTick);refreshHandler.removeCallbacks(authorTick);refreshHandler.removeCallbacks(automaticSessionTick);worker.shutdown();super.onDestroy();}
@@ -355,7 +355,7 @@ public final class MainActivity extends Activity {
         boolean targeted=false;for(ForumParser.Post post:page.posts)if(post.id.equals(postId)){targeted=true;break;}
         String key=threadTabKey(page.id);ThreadTab existing=threadTabs.get(key);ReadingAnchor anchor=targeted||existing==null?null:existing.anchor;
 
-        current=page;rememberThreadTab();ThreadTab selected=threadTabs.get(key);ownThread=page.id;ownSelected=selected==null?"":selected.own;thread();if(targeted)jump(postId);else if(anchor!=null)restoreAnchor(anchor);
+        restoredComposerThread=false;current=page;rememberThreadTab();ThreadTab selected=threadTabs.get(key);ownThread=page.id;ownSelected=selected==null?"":selected.own;thread();if(targeted)jump(postId);else if(anchor!=null)restoreAnchor(anchor);
     }
     private void switchThreadTab(String key){ThreadTab tab=threadTabs.get(key);if(tab==null)return;saveThreadTab();if(tabsDialog!=null)tabsDialog.dismiss();if(tab.origin.equals(client.origin)&&screen.equals("thread")&&current!=null&&current.id.equals(tab.id))return;
         navigateForumThread(tab.origin,tab.id,"",true);
@@ -528,6 +528,21 @@ public final class MainActivity extends Activity {
         rememberReplyPosition(newThread);
         run("Preparing reply…",()->client.prepare(newThread?"":current.id,target,newThread),form->{composeForm=form;parent=target;draft=initial;subject="";composer();});
     }
+    @Override protected void onSaveInstanceState(Bundle state){
+        capture();if(composeForm!=null&&(screen.equals("compose")||screen.equals("upload-settings")&&uploadSettingsFromComposer))try{
+            ComposerState saved=new ComposerState();saved.origin=client.origin;saved.form=composeForm;saved.message=draft;saved.subject=subject;saved.parent=parent;
+            if(current!=null){saved.threadId=current.id;saved.threadTitle=current.title;}
+            if(messageInput!=null){saved.cursorStart=messageInput.getSelectionStart();saved.cursorEnd=messageInput.getSelectionEnd();}
+            if(subjectInput!=null){saved.subjectStart=subjectInput.getSelectionStart();saved.subjectEnd=subjectInput.getSelectionEnd();saved.subjectFocused=subjectInput.hasFocus();}
+            saved.returnThread=replyReturnThread;if(replyReturnAnchor!=null){saved.returnTag=replyReturnAnchor.tag==null?"":replyReturnAnchor.tag;saved.returnOffset=replyReturnAnchor.offset;saved.returnY=replyReturnAnchor.y;}if(scroll!=null)saved.scrollY=scroll.getScrollY();state.putString(ComposerState.KEY,saved.encode(vault));
+        }catch(Exception unavailable){state.remove(ComposerState.KEY);}super.onSaveInstanceState(state);
+    }
+    private void restoreComposerScreen(){
+        ComposerState saved=restoredComposer;restoredComposer=null;composeForm=saved.form;draft=saved.message;subject=saved.subject;parent=saved.parent;replyReturnThread=saved.returnThread;if(!saved.returnThread.isEmpty()){replyReturnAnchor=new ReadingAnchor();replyReturnAnchor.tag=saved.returnTag.isEmpty()?null:saved.returnTag;replyReturnAnchor.offset=saved.returnOffset;replyReturnAnchor.y=saved.returnY;}
+        if(!saved.threadId.isEmpty()){current=new ForumParser.ThreadPage();current.id=saved.threadId;current.title=saved.threadTitle;current.url=client.origin+"/thread.php?thread_id="+saved.threadId+"&forum_id=2";restoredComposerThread=true;}
+        composer();EditText body=messageInput,title=subjectInput;ScrollView restoredScroll=scroll;
+        root.post(()->{if(!screen.equals("compose")||scroll!=restoredScroll)return;if(body!=null)body.setSelection(Math.max(0,Math.min(saved.cursorStart,body.length())),Math.max(0,Math.min(saved.cursorEnd,body.length())));if(title!=null)title.setSelection(Math.max(0,Math.min(saved.subjectStart,title.length())),Math.max(0,Math.min(saved.subjectEnd,title.length())));if(saved.subjectFocused&&title!=null)title.requestFocus();else if(body!=null)body.requestFocus();restoredScroll.scrollTo(0,Math.max(0,saved.scrollY));});
+    }
     private void capture(){if(messageInput!=null)draft=messageInput.getText().toString();if(subjectInput!=null)subject=subjectInput.getText().toString();}
     private void editPost(String id){if(!draft.isEmpty()){new ThemeDialogs(this).setTitle("Keep your existing draft?").setMessage("Continue the draft or discard it to edit this post.").setPositiveButton("Continue draft",(d,n)->composer()).setNegativeButton("Discard",(d,n)->{draft="";subject="";editPost(id);}).show();return;}rememberReplyPosition(false);run("Loading edit form…",()->client.prepareEdit(current.id,id),form->{composeForm=form;draft=form.initialMessage;subject=form.initialSubject;composer();});}
     private void composer(){screen="compose";shell(!composeForm.editPostId.isEmpty()?"Edit post":composeForm.newThread?"New thread":composeForm.threadLevel?"Reply to thread":"Reply to post");
@@ -536,12 +551,12 @@ public final class MainActivity extends Activity {
         if(composeForm.hasMessage||composeForm.newThread){gap(content,12);messageInput=field("Your message",true);messageInput.setGravity(Gravity.TOP);messageInput.setMinLines(9);messageInput.setText(draft);content.addView(messageInput);FormLimitHint.bind(messageInput,content,FormLimits.rule(composeForm,"message"));}
         
         gap(content,12);LinearLayout actions=row();addButton(actions,"Cancel",this::closeComposer);if(messageInput!=null){UploadImageView upload=new UploadImageView(this);upload.setTag("upload-image");upload.setContentDescription("Upload image to "+ImageUpload.name(uploadHost()));upload.setTooltipText("Upload image to "+ImageUpload.name(uploadHost()));upload.setBackground(box(PANEL,9));upload.setOnClickListener(v->pickUploadImage());LinearLayout.LayoutParams space=new LinearLayout.LayoutParams(dp(46),dp(46));space.setMargins(dp(6),0,dp(6),0);actions.addView(upload,space);}addButton(actions,!composeForm.editPostId.isEmpty()?"Save changes":composeForm.hasMessage||composeForm.newThread?"Post":"Continue",()->{capture();if(composeForm.newThread&&!composeForm.subjectField.isEmpty()&&subject.trim().isEmpty()){Toast.makeText(this,"Enter a title.",Toast.LENGTH_SHORT).show();return;}send();});content.addView(actions);
-        content.addView(text("Draft stays here while you browse. Closing the app discards an unsent draft.",13,MUTED));
+        content.addView(text("Draft stays here while you browse. Switching apps preserves this composer; removing the app from Recents discards it.",13,MUTED));
     }
     private void send(){try{FormLimits.posting(composeForm,subject,draft);}catch(IllegalArgumentException invalid){Toast.makeText(this,invalid.getMessage(),Toast.LENGTH_LONG).show();return;}String id=composeForm.thread.matches("\\d+")&&!composeForm.thread.equals("0")?composeForm.thread:"",editId=composeForm.editPostId;boolean newThread=composeForm.newThread;run(!editId.isEmpty()?"Saving changes…":composeForm.hasMessage||newThread?"Posting once…":"Preparing composer…",()->!editId.isEmpty()?client.saveEdit(composeForm,subject,draft,id):newThread?client.createThread(composeForm,subject,draft):client.post(composeForm,subject,draft,id),result->completeSubmission(result,newThread,editId));}
     private void completeSubmission(ForumClient.Submission result,boolean newThread,String editId){
         if(result.next!=null){composeForm=result.next;composer();return;}
-        ReadingAnchor returnTo=replyReturnThread.equals(client.origin+":"+result.thread.id)?replyReturnAnchor:null;replyReturnAnchor=null;replyReturnThread="";draft="";subject="";current=result.thread;
+        ReadingAnchor returnTo=replyReturnThread.equals(client.origin+":"+result.thread.id)?replyReturnAnchor:null;replyReturnAnchor=null;replyReturnThread="";draft="";subject="";restoredComposerThread=false;current=result.thread;
         if(newThread){composeForm=null;page=1;search="";filter="All";board();loadBoard();return;}
         thread();if(!screen.equals("thread"))return;if(!editId.isEmpty())jump(editId);else if(returnTo!=null)restoreAnchor(returnTo);
     }
@@ -634,7 +649,7 @@ public final class MainActivity extends Activity {
     }
     void registerAppWindow(Window window){if(appLock!=null)appLock.register(window);}
     private void clearAccountPrivacy(){if(appLock==null||!appLock.enabled())getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);}
-    private void startAppContent(){if(appContentStarted||appLock!=null&&appLock.locked())return;appContentStarted=true;restoreThreadTabs();board();loadBoard();}
+    private void startAppContent(){if(appContentStarted||appLock!=null&&appLock.locked())return;appContentStarted=true;restoreThreadTabs();if(restoredComposer!=null){restoreComposerScreen();return;}board();loadBoard();}
     private void afterAppUnlock(){startAppContent();if(deferredBackupResult!=null){Intent result=deferredBackupResult;int request=deferredBackupRequest;deferredBackupResult=null;backupResult(request,RESULT_OK,result);}if(deferredUploadResult!=null){Intent result=deferredUploadResult;deferredUploadResult=null;onActivityResult(PICK_UPLOAD_IMAGE,RESULT_OK,result);}if(activityResumed)resumeAppContent();}
     private void appLockSettingChanged(){if(screen.equals("account")&&accountSection.equals("AppLock"))account();}
     private void renderAppLockSetting(){
@@ -765,6 +780,6 @@ private void accountLogin(){ final boolean protectedAccounts=accountSection.equa
         try{PreviewFetch.webUrl(url);LinkPreviewDialog dialog=new LinkPreviewDialog(this,url,this::link);dialog.setLinkHold(this::linkActions);previews.add(dialog);dialog.setOnDismissListener(d->{previews.remove(dialog);scheduleAuthors();});dialog.open();}catch(Exception e){Toast.makeText(this,"This link cannot be previewed.",Toast.LENGTH_SHORT).show();}
     }
     private void external(String url){Uri uri=Uri.parse(url);if(!"https".equals(uri.getScheme())&&!"http".equals(uri.getScheme()))return;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(ActivityNotFoundException e){Toast.makeText(this,"No browser is installed.",Toast.LENGTH_SHORT).show();}}
-    private void closeComposer(){capture();if(composeForm!=null&&!composeForm.editPostId.isEmpty()&&draft.equals(composeForm.initialMessage)&&subject.equals(composeForm.initialSubject)){draft="";subject="";}if(composeForm!=null&&!composeForm.newThread&&current!=null){ReadingAnchor anchor=replyReturnThread.equals(client.origin+":"+current.id)?replyReturnAnchor:null;thread();if(anchor!=null&&screen.equals("thread"))restoreAnchor(anchor);}else board();}
+    private void closeComposer(){capture();if(restoredComposerThread&&current!=null&&!composeForm.newThread){String id=current.id;run("Loading thread…",()->client.thread(id),page->{restoredComposerThread=false;acceptThreadTab(page,false);if(replyReturnAnchor!=null&&replyReturnThread.equals(client.origin+":"+page.id))restoreAnchor(replyReturnAnchor);});return;}if(composeForm!=null&&!composeForm.editPostId.isEmpty()&&draft.equals(composeForm.initialMessage)&&subject.equals(composeForm.initialSubject)){draft="";subject="";}if(composeForm!=null&&!composeForm.newThread&&current!=null){ReadingAnchor anchor=replyReturnThread.equals(client.origin+":"+current.id)?replyReturnAnchor:null;thread();if(anchor!=null&&screen.equals("thread"))restoreAnchor(anchor);}else board();}
     @Override public void onBackPressed(){if(appLock!=null&&appLock.locked()){moveTaskToBack(true);return;}if(busy)return;if(screen.equals("thread")&&findOpen){closeThreadFind();return;}if(helpBack())return;if(screen.equals("upload-settings")){if(uploadSettingsFromComposer&&composeForm!=null)composer();else account();}else if(screen.equals("compose")){closeComposer();}else if(!screen.equals("board")){board();}else super.onBackPressed();}
 }
