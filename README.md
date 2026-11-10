@@ -73,9 +73,17 @@ Account → Updates accepts a public GitHub `owner/repository` or its HTTPS URL.
 
 Because the project is abandoned, this updater is a convenience for releases that actually exist, **not a promise of future releases**. A community fork may use its own release source. A differently signed fork generally cannot update an existing installation in place.
 
+## Export and import settings
+
+Use **Account → Updates → Backup → Export settings** to save a JSON file with Android’s file picker. **Import settings** validates the selected file and asks before applying it. Matching settings are replaced; unrelated settings stay unchanged.
+
+Backups include themes and scheduling, reply-preview preferences, blocked authors, hidden threads and saved tabs with reading positions. Hidden threads retain their original expiry. Passwords, saved accounts, cookies, upload API keys and PIN/security settings are excluded, so you must set those up again after reinstalling or switching phones.
+
+**The JSON is readable and may contain thread titles and hidden author names. Keep it private.** Releases from before this feature cannot import it. Unknown settings in a supported format are skipped; newer, unsupported backup formats are rejected without changes.
+
 ## Privacy and limitations
 
-Saved logins and cookies are encrypted on the device using Android Keystore. App backups are disabled. No developer-operated backend, analytics or embedded user credentials are included.
+Saved logins and cookies are encrypted on the device using Android Keystore. Automatic Android app backups are disabled. No developer-operated backend, analytics or embedded user credentials are included.
 
 The websites, GitHub, image hosts and external preview providers still receive the requests needed for the features you use. This app does not make browsing anonymous. Do not share a working build folder, signing keys or account data with other people; share the release APK.
 

@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.xoclassic.app'
     compileSdk 36
-    defaultConfig { applicationId 'com.xoclassic.app'; minSdk 26; targetSdk 35; versionCode 90; versionName '0.1.89' }
+    defaultConfig { applicationId 'com.xoclassic.app'; minSdk 26; targetSdk 35; versionCode 92; versionName '0.1.91' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies { implementation files('libs/jsoup-1.24.1.jar') }
