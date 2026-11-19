@@ -12,7 +12,7 @@ import java.util.*;
 /** UI-thread viewport exposure; no network work, and unseen/recycled posts keep their tint. */
 public final class ReplyHighlights {
     private static final int BASE=0xff34383f,TINT=0xff4c3d47;
-    private static final class Entry {View card;GradientDrawable surface;long last,dwell,fade;}
+    private static final class Entry {View card;GradientDrawable surface;long last,dwell,fade;boolean requested,read;}
     private final ScrollView scroll;private final LinearLayout content;private final SharedPreferences prefs;private final String pendingKey;
     private final Map<String,Entry> pending=new HashMap<>();private final Rect visible=new Rect();
     private boolean active=true,closed,queued;
@@ -30,8 +30,9 @@ public final class ReplyHighlights {
         content.getViewTreeObserver().addOnPreDrawListener(layout);
     }
     public void bind(String id,View card,GradientDrawable surface){Entry entry=pending.get(id);if(entry==null)return;entry.card=card;entry.surface=surface;entry.last=0;surface.setColor(color(entry.fade/1500f));request();}
-    public Set<String> unreadIds(){return new HashSet<>(pending.keySet());}
-    public int unreadCount(){return pending.size();}
+    public Set<String> unreadIds(){Set<String> ids=new HashSet<>();for(Map.Entry<String,Entry> e:pending.entrySet())if(!e.getValue().read)ids.add(e.getKey());return ids;}
+    public int unreadCount(){return unreadIds().size();}
+    public void markWhenVisible(String id){Entry entry=pending.get(id);if(entry!=null){entry.requested=true;request();}}
     public void setUnreadChanged(Runnable listener){unreadChanged=listener;}
     public void setActive(boolean value){active=value;for(Entry entry:pending.values()){entry.last=0;if(entry.fade==0)entry.dwell=0;}if(value)request();else{content.removeCallbacks(tick);queued=false;}}
     public void request(){if(!closed&&active&&!queued&&!pending.isEmpty()){queued=true;content.postOnAnimation(tick);}}
@@ -45,13 +46,14 @@ public final class ReplyHighlights {
         Iterator<Map.Entry<String,Entry>> entries=pending.entrySet().iterator();
         while(entries.hasNext()){
             Entry entry=entries.next().getValue();if(!exposed(entry)){entry.last=0;if(entry.fade==0)entry.dwell=0;continue;}
+            if(entry.requested&&!entry.read){entry.read=true;changed=true;}
             again=true;long elapsed=entry.last==0?0:Math.min(100,Math.max(0,now-entry.last));entry.last=now;
             if(entry.dwell<500){entry.dwell+=elapsed;continue;}
             entry.fade=ValueAnimator.areAnimatorsEnabled()?Math.min(1500,entry.fade+elapsed):1500;
             if(entry.surface!=null)entry.surface.setColor(color(entry.fade/1500f));
             if(entry.fade>=1500){entries.remove();changed=true;}
         }
-        if(changed){prefs.edit().putStringSet(pendingKey,new HashSet<>(pending.keySet())).apply();unreadChanged.run();}
+        if(changed){prefs.edit().putStringSet(pendingKey,unreadIds()).apply();unreadChanged.run();}
         if(again)request();
     }
     public void close(){if(closed)return;closed=true;content.removeCallbacks(tick);if(content.getViewTreeObserver().isAlive())content.getViewTreeObserver().removeOnPreDrawListener(layout);pending.clear();}

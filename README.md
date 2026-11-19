@@ -41,6 +41,7 @@ Requires **Android 8.0 or later**. This is an unofficial app, distributed as an 
 | Keep a few conversations open | Hold a thread title and choose **Open in new tab**. Ordinary taps do not save tabs. Open the tab selector to switch, swipe to close, or undo a close. Saved tabs restore after restarting. |
 | Follow a thread | Read indented replies, jump to a parent, or enable **Nested cards** or **Stacked popovers** in Account → Reading. |
 | Catch new replies | Watch for red stars on the board and a brief tint on newly detected replies. In a thread, the floating bubble shows how many unread replies remain; tap it to jump to the closest one. It disappears at zero. |
+| Jump to the newest reply | Tap the down-arrow above the unread bubble. It hides after use for the current visit and returns when you reopen a thread. Toggle it under Account → Reading. |
 | Find your own posts | Use the ‹ count › controls in the thread header. Ownership depends on the website exposing an Edit link, not on matching a posting name. |
 | Reply quickly | Tap **BB** for a blank bump. Hold it for sorted quick replies: `120`, `180`, `cq`, `cr`, `mfcr`, `ntcr`, `tcr`. These send immediately. |
 | Search within a thread | Open **⋮ → Find in thread**. Search runs on the loaded post text. |

@@ -28,7 +28,7 @@ public final class SettingsBackup {
         return new String(bytes.toByteArray(),StandardCharsets.UTF_8);
     }
     public static String export(SharedPreferences prefs,SharedPreferences themes)throws JSONException {
-        JSONObject main=new JSONObject(),colors=new JSONObject();main.put("replyPreviewMode",prefs.getString("replyPreviewMode","links")).put("hiddenThreadAuthors",json(prefs.getStringSet("hiddenThreadAuthors",Collections.emptySet()))).put("openThreadTabs",prefs.getString("openThreadTabs","{\"tabs\":[],\"active\":\"\"}"));colors.put("custom",themes.getString("custom","{}")).put("active",themes.getString("active","Default")).put("day",themes.getString("day","Light")).put("night",themes.getString("night","Default")).put("scheduled",themes.getBoolean("scheduled",false)).put("dayTime",themes.getInt("dayTime",420)).put("nightTime",themes.getInt("nightTime",1140));
+        JSONObject main=new JSONObject(),colors=new JSONObject();main.put(NewestReply.KEY,prefs.getBoolean(NewestReply.KEY,true));main.put("replyPreviewMode",prefs.getString("replyPreviewMode","links")).put("hiddenThreadAuthors",json(prefs.getStringSet("hiddenThreadAuthors",Collections.emptySet()))).put("openThreadTabs",prefs.getString("openThreadTabs","{\"tabs\":[],\"active\":\"\"}"));colors.put("custom",themes.getString("custom","{}")).put("active",themes.getString("active","Default")).put("day",themes.getString("day","Light")).put("night",themes.getString("night","Default")).put("scheduled",themes.getBoolean("scheduled",false)).put("dayTime",themes.getInt("dayTime",420)).put("nightTime",themes.getInt("nightTime",1140));
         Map<String,?> values=prefs.getAll();
         for(String key:new String[]{"replyPreviewMode","hiddenThreadAuthors","openThreadTabs"})if(values.containsKey(key))main.put(key,json(values.get(key)));
         for(String site:SITES){for(String suffix:new String[]{"hiddenThreadIds","hiddenThreadOrder"}){String key=site+":"+suffix;if(values.containsKey(key))main.put(key,json(values.get(key)));}
@@ -54,7 +54,8 @@ public final class SettingsBackup {
             if(text.getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw new JSONException("Too large");checkDepth(text);JSONObject root=new JSONObject(text);if(!root.getString("format").equals("autoadmit-settings")||number(root.get("version"),1,1)!=1)throw new JSONException("Unsupported backup format");
             Plan plan=new Plan();JSONObject main=root.getJSONObject("settings"),colors=root.getJSONObject("appearance");Iterator<String> keys=main.keys();
             while(keys.hasNext()){String key=keys.next();Object value=main.get(key);
-                if(key.equals("replyPreviewMode")){String mode=string(value,10);if(!Arrays.asList("links","nested","stacked").contains(mode))throw new JSONException("Invalid preview mode");plan.classic.put(key,mode);}
+                if(key.equals(NewestReply.KEY)){if(!(value instanceof Boolean))throw new JSONException("Invalid newest-reply toggle");plan.classic.put(key,value);}
+                else if(key.equals("replyPreviewMode")){String mode=string(value,10);if(!Arrays.asList("links","nested","stacked").contains(mode))throw new JSONException("Invalid preview mode");plan.classic.put(key,mode);}
                 else if(key.equals("hiddenThreadAuthors"))plan.classic.put(key,strings(value,2000,500,false));
                 else if(key.equals("openThreadTabs"))plan.classic.put(key,tabs(string(value,30000)));
                 else for(String site:SITES){String prefix=site+":";if(!key.startsWith(prefix))continue;String suffix=key.substring(prefix.length());
