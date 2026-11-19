@@ -44,6 +44,7 @@ Requires **Android 8.0 or later**. This is an unofficial app, distributed as an 
 | Jump to the newest reply | Tap the down-arrow above the unread bubble. It hides after use for the current visit and returns when you reopen a thread. Toggle it under Account → Reading. |
 | Find your own posts | Use the ‹ count › controls in the thread header. Ownership depends on the website exposing an Edit link, not on matching a posting name. |
 | Reply quickly | Tap **BB** for a blank bump. Hold it for sorted quick replies: `120`, `180`, `cq`, `cr`, `mfcr`, `ntcr`, `tcr`. These send immediately. |
+| Browse the reply outline | Open **⋮ → Thread outline**. Expand branches with arrows, tap reply text to return to that post, or use Posts to return to your reading position. |
 | Search within a thread | Open **⋮ → Find in thread**. Search runs on the loaded post text. |
 | View images and other links | Tap a supported link for a full-screen preview. **⋮ → Thread media** gathers supported media links in the thread. Long-press an external link for browser, preview and copy actions. |
 | Share a particular reply | Hold a post’s date to copy its permalink. Hold a board title to copy the thread URL. |
